@@ -1,4 +1,4 @@
-import { scaleFactor } from "./constants";
+import { scaleFactor, dialogueData } from "./constants";
 import { k } from "./kaboomCtx";
 import { displayDialogue, setCamScale } from "./utils";
 
@@ -66,8 +66,7 @@ k.scene("main", async () => {
           // want to check collision with this boundary
           player.onCollide(boundary.name, () => {
             player.isInDialogue = true;
-            // TODO: CHANGE TO dialogueData[boundary.name] 
-            displayDialogue("TODO:", () => {
+            displayDialogue(dialogueData[boundary.name], () => {
               player.isInDialogue = false;
             });
           });
@@ -94,7 +93,7 @@ k.scene("main", async () => {
 
   k.onResize(() => {
     setCamScale(k);
-  })
+  });
 
   k.onUpdate(() => {
     k.camPos(player.pos.x, player.pos.y + 100);
@@ -105,48 +104,100 @@ k.scene("main", async () => {
     const worldMousePos = k.toWorld(k.mousePos());
     player.moveTo(worldMousePos, player.speed);
 
-    const mouseAngle = player.pos.angle(worldMousePos)
-    const lowerBound = 50
+    const mouseAngle = player.pos.angle(worldMousePos);
+    const lowerBound = 50;
     const upperBound = 125;
-    if(mouseAngle > lowerBound && mouseAngle < upperBound && player.curAnim() !== "walk-up"){
+    if (
+      mouseAngle > lowerBound &&
+      mouseAngle < upperBound &&
+      player.curAnim() !== "walk-up"
+    ) {
       player.play("walk-up");
       player.direction = "up";
       return;
     }
-    if(mouseAngle < -lowerBound && mouseAngle > -upperBound && player.curAnim() !== "walk-down"){
+    if (
+      mouseAngle < -lowerBound &&
+      mouseAngle > -upperBound &&
+      player.curAnim() !== "walk-down"
+    ) {
       player.play("walk-down");
       player.direction = "down";
       return;
     }
 
-    if(Math.abs(mouseAngle) > upperBound){
+    if (Math.abs(mouseAngle) > upperBound) {
       player.flipX = false;
-      if(player.curAnim() !== "walk-side") player.play("walk-side");
+      if (player.curAnim() !== "walk-side") player.play("walk-side");
       player.direction = "right";
     }
 
-    if(Math.abs(mouseAngle) < lowerBound){
+    if (Math.abs(mouseAngle) < lowerBound) {
       player.flipX = true;
-      if(player.curAnim() !== "walk-side") player.play("walk-side");
+      if (player.curAnim() !== "walk-side") player.play("walk-side");
       player.direction = "left";
       return;
     }
-
   });
 
   k.onMouseRelease(() => {
-    if(player.direction === "down"){
+    if (player.direction === "down") {
       player.play("idle-down");
       return;
     }
 
-    if(player.direction == "up"){
-      player.play("idle-up")
+    if (player.direction == "up") {
+      player.play("idle-up");
       return;
     }
 
-    player.play("idle-side")
-  })
+    player.play("idle-side");
+  });
+
+  // Keyboard controls
+  k.keyDown("left", () => {
+    player.move(-player.speed, 0);
+    if (player.curAnim() !== "walk-side" || player.direction !== "left") {
+      player.play("walk-side");
+      player.flipX = true;
+      player.direction = "left";
+    }
+  });
+
+  k.keyDown("right", () => {
+    player.move(player.speed, 0);
+    if (player.curAnim() !== "walk-side" || player.direction !== "right") {
+      player.play("walk-side");
+      player.flipX = false;
+      player.direction = "right";
+    }
+  });
+
+  k.keyDown("up", () => {
+    player.move(0, -player.speed);
+    if (player.curAnim() !== "walk-up") {
+      player.play("walk-up");
+      player.direction = "up";
+    }
+  });
+
+  k.keyDown("down", () => {
+    player.move(0, player.speed);
+    if (player.curAnim() !== "walk-down") {
+      player.play("walk-down");
+      player.direction = "down";
+    }
+  });
+
+  k.keyRelease(["left", "right", "up", "down"], () => {
+    if (player.direction === "left" || player.direction === "right") {
+      player.play("idle-side");
+    } else if (player.direction === "up") {
+      player.play("idle-up");
+    } else if (player.direction === "down") {
+      player.play("idle-down");
+    }
+  });
 });
 
 k.go("main"); // goes to the main scene
