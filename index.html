@@ -46,7 +46,7 @@
         padding: 1rem;
         display: flex;
         flex-direction: column;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: flex-start;
         align-items: flex-start;
         word-spacing: 0.2rem;
@@ -67,6 +67,7 @@
       }
 
       .btn-container{
+        flex-shrink: 0;
         align-self: flex-end;
         margin-top: 1rem;
       }
@@ -93,11 +94,26 @@
       #help-button:disabled { opacity: 0.5; cursor: default; }
       #touch-controls { display: none; }
       #textbox-container { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
-      #textbox { max-height: 65dvh; overflow-y: auto; pointer-events: auto; }
+      #textbox {
+        box-sizing: border-box;
+        max-height: 65vh;
+        max-height: 65dvh;
+        overflow: hidden;
+        pointer-events: auto;
+      }
+      #dialogue {
+        min-height: 0;
+        width: 100%;
+        overflow-y: auto;
+        overflow-wrap: anywhere;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
+      }
       @media (any-pointer: coarse) {
         html, body {
           overscroll-behavior: none;
-          touch-action: none;
+          touch-action: pan-y;
         }
         body {
           user-select: none;
@@ -105,7 +121,18 @@
           -webkit-touch-callout: none;
         }
         #game { touch-action: none; }
-        #textbox { touch-action: pan-y; }
+        #textbox {
+          left: 5%;
+          right: 5%;
+          bottom: max(12px, env(safe-area-inset-bottom));
+          padding: 0.75rem;
+          font-size: 1.5rem;
+          line-height: 1.15;
+          word-spacing: 0.1rem;
+          touch-action: pan-y;
+        }
+        .btn-container { margin-top: 0.5rem; }
+        .ui-close-btn { min-height: 44px; padding: 0.5rem 1rem; }
         #help-button, .esc-hint { display: none; }
         #touch-controls {
           position: fixed;

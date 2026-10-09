@@ -4,6 +4,7 @@ export function displayDialogue(text, onDisplayEnd) {
   const dialogue = document.getElementById("dialogue");
   dialogueUI.style.display = "block";
   dialogue.replaceChildren();
+  dialogue.scrollTop = 0;
   const message = document.createElement("span");
   dialogue.append(message);
   for (const link of content.links ?? []) {
