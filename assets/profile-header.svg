@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="840" height="156" viewBox="0 0 840 156" role="img" aria-labelledby="title desc">
   <title id="title">Giovanni Maya</title>
-  <desc id="desc">Warm pixel-art banner with Gio's game character. i write code. sometimes it even works.</desc>
+  <desc id="desc">Warm pixel-art banner with Gio's game character. software, data, and a little creativity.</desc>
   <rect width="840" height="156" fill="#302321"/>
   <path d="M0 0H36V4H4V36H0Z M840 156H804V152H836V120H840Z" fill="#e2ae60"/>
   <text x="32" y="68" fill="#f7efba" font-family="monospace" font-size="32" font-weight="bold">Giovanni Maya</text>
-  <text x="34" y="104" fill="#d1ae94" font-family="monospace" font-size="17">i write code. sometimes it even works.</text>
+  <text x="34" y="104" fill="#d1ae94" font-family="monospace" font-size="17">software, data, and a little creativity.</text>
   <g transform="translate(712 34) scale(6)" shape-rendering="crispEdges">
 <rect x="5" y="0" width="1" height="1" fill="#1e1410"/>
 <rect x="6" y="0" width="1" height="1" fill="#1e1410"/>
