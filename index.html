@@ -107,7 +107,7 @@
         #game { touch-action: none; }
         #textbox { touch-action: pan-y; }
         #help-button, .esc-hint { display: none; }
-        #touch-controls:not([hidden]) {
+        #touch-controls {
           position: fixed;
           left: max(16px, env(safe-area-inset-left));
           bottom: max(16px, env(safe-area-inset-bottom));
@@ -171,7 +171,7 @@
     <div id="app">
       <div class="ui">
         <button id="help-button" type="button" aria-haspopup="dialog">How to navigate</button>
-        <nav id="touch-controls" aria-label="Movement controls" hidden>
+        <nav id="touch-controls" aria-label="Movement controls">
           <button type="button" data-direction="up" aria-label="Move up">▲</button>
           <button type="button" data-direction="left" aria-label="Move left">◀</button>
           <button type="button" data-direction="right" aria-label="Move right">▶</button>
