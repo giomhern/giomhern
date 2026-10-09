@@ -7,25 +7,38 @@ export function displayDialogue(text, onDisplayEnd) {
   dialogue.scrollTop = 0;
   const message = document.createElement("span");
   dialogue.append(message);
-  for (const link of content.links ?? []) {
-    const anchor = document.createElement("a");
-    anchor.textContent = link.label;
-    anchor.href = link.href;
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-    dialogue.append(anchor);
-  }
-
+  const segments = [
+    { text: content.text, element: message },
+    ...(content.links ?? []).map((link) => ({ text: link.label, link })),
+  ];
+  let segmentIndex = 0;
   let index = 0;
-  let currentText = "";
   const intervalRef = setInterval(() => {
-    if (index < content.text.length) {
-      currentText += content.text[index];
-      message.textContent = currentText;
-      index++;
-      return;
+    while (segmentIndex < segments.length && index >= segments[segmentIndex].text.length) {
+      segmentIndex++;
+      index = 0;
     }
-    clearInterval(intervalRef);
+    if (segmentIndex < segments.length) {
+      const segment = segments[segmentIndex];
+      if (!segment.element) {
+        segment.element = document.createElement("span");
+        segment.element.className = "dialogue-link";
+        dialogue.append(segment.element);
+      }
+      segment.element.textContent = segment.text.slice(0, ++index);
+    } else {
+      clearInterval(intervalRef);
+      // Keep link text plain while typing; activate it after the whole dialog finishes.
+      for (const segment of segments.filter((segment) => segment.link)) {
+        const anchor = document.createElement("a");
+        anchor.className = "dialogue-link";
+        anchor.textContent = segment.text;
+        anchor.href = segment.link.href;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        segment.element.replaceWith(anchor);
+      }
+    }
   }, 5);
 
   const closeBtn = document.getElementById("close");
