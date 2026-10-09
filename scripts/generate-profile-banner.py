@@ -45,7 +45,7 @@ def character(frame, flip=False):
     return sprite.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if flip else sprite
 
 
-# A quiet home backdrop: tall cream wall, narrow floor, one window and plant.
+# A home backdrop with sprites from the same sheets used by the game.
 room = Image.new('RGBA', (280, 96), BG)
 floor = crop(adventure, 432, 16, 16, 16)
 wall = crop(adventure, 432, 0, 16, 16).resize((16, 64), Image.Resampling.NEAREST)
@@ -54,11 +54,13 @@ for x in range(0, 280, 16):
     for y in range(64, 96, 16):
         paste(room, floor, (x, y))
 
-center = 34
 window = crop(items, 0, 16, 16, 32)
-paste(room, window, (center - 14, 18))
-paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 2, 18))
-paste(room, crop(furniture, 128, 160, 32, 32), (center - 16, 18))
+for center in (34, 222):
+    paste(room, window, (center - 14, 18))
+    paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 2, 18))
+    paste(room, crop(furniture, 128, 160, 32, 32), (center - 16, 18))
+paste(room, crop(items, 0, 64, 32, 16), (124, 16))
+paste(room, crop(furniture, 192, 48, 32, 32), (124, 40))
 paste(room, crop(furniture, 192, 112, 16, 48), (252, 30), .75)
 
 frames = []
