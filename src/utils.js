@@ -13,7 +13,7 @@ export function displayDialogue(text, onDisplayEnd) {
     anchor.href = link.href;
     anchor.target = "_blank";
     anchor.rel = "noopener noreferrer";
-    dialogue.append(document.createElement("br"), anchor);
+    dialogue.append(anchor);
   }
 
   let index = 0;
