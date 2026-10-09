@@ -1,4 +1,9 @@
-<a href="https://giomhern.vercel.app"><img src="assets/profile-header.svg" alt="Giovanni Maya — software, data, and a little creativity." width="840" /></a>
+<a href="https://giomhern.vercel.app">
+  <picture>
+    <source media="(prefers-reduced-motion: reduce)" srcset="assets/profile-header.svg" />
+    <img src="assets/profile-header.gif" alt="Giovanni Maya — software, data, and a little creativity. My pixel character taking a stroll through the living room." width="840" />
+  </picture>
+</a>
 
 CS + Data Science at **UChicago**. I like building useful things and making them cool.
 
