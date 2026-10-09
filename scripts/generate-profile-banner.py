@@ -49,58 +49,48 @@ def font(size):
     return ImageFont.truetype(str(ROOT / 'public/monogram.ttf'), size)
 
 
-# Draw at native pixel scale, then enlarge without smoothing like the game.
+# A quiet home backdrop: tall cream wall, narrow floor, one window and plant.
 room = Image.new('RGBA', (280, 96), BG)
 floor = crop(adventure, 432, 16, 16, 16)
-wall = crop(adventure, 432, 0, 16, 16).resize((16, 32), Image.Resampling.NEAREST)
+wall = crop(adventure, 432, 0, 16, 16).resize((16, 64), Image.Resampling.NEAREST)
 for x in range(0, 280, 16):
     paste(room, wall, (x, 0))
-    for y in range(32, 96, 16):
+    for y in range(64, 96, 16):
         paste(room, floor, (x, y))
 
-# Familiar furniture forms the whole banner, rather than a separate thumbnail.
-for center in (34, 246):
-    window = crop(items, 0, 16, 16, 32)
-    paste(room, window, (center - 10, 2), .75)
-    paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 1, 2), .75)
-    paste(room, crop(furniture, 128, 160, 32, 32), (center - 12, 2), .75)
-paste(room, crop(furniture, 128, 128, 48, 32), (16, 23), .75)
-paste(room, crop(furniture, 160, 160, 48, 32), (228, 23), .75)
-paste(room, crop(furniture, 48, 144, 48, 32), (116, 52))
-paste(room, crop(adventure, 496, 80, 32, 16), (120, 43), 1.25)
-paste(room, crop(furniture, 0, 128, 48, 48), (230, 56), .75)
-paste(room, crop(furniture, 48, 176, 16, 32), (202, 44), .75)
-paste(room, crop(furniture, 168, 48, 24, 32), (66, 34), .75)
-for x in (3, 268):
-    paste(room, crop(furniture, 192, 112, 16, 48), (x, 41), .75)
+center = 34
+window = crop(items, 0, 16, 16, 32)
+paste(room, window, (center - 14, 18))
+paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 2, 18))
+paste(room, crop(furniture, 128, 160, 32, 32), (center - 16, 18))
+paste(room, crop(furniture, 192, 112, 16, 48), (252, 30), .75)
 
 # A wall-mounted nameplate uses the exact font bundled with the portfolio.
 draw = ImageDraw.Draw(room)
-draw.rectangle((66, 2, 214, 30), fill='#502c32')
-draw.rectangle((68, 4, 212, 28), fill='#b66b40')
-draw.rectangle((70, 6, 210, 26), fill=BG)
+draw.rectangle((66, 18, 214, 50), fill='#502c32')
+draw.rectangle((68, 20, 212, 48), fill='#b66b40')
+draw.rectangle((70, 22, 210, 46), fill=BG)
 for text, y, size, color in [
-    ('Giovanni Maya', 1, 20, '#f7efba'),
-    ('software, data & creativity.', 16, 10, '#e2ae60'),
+    ('Giovanni Maya', 19, 20, '#f7efba'),
+    ('software, data & creativity.', 35, 10, '#e2ae60'),
 ]:
     text_font = font(size)
     width = draw.textlength(text, font=text_font)
-    # Monochrome glyph masks preserve crisp pixel edges.
     draw.fontmode = '1'
     draw.text((round((280 - width) / 2), y), text, font=text_font, fill=color)
 
 frames = []
-for i in range(96):
+for i in range(128):
     scene = room.copy()
-    if i < 40:
-        x, frame, flip = round(46 + 164 * i / 39), 975 + (i // 2) % 4, False
-    elif i < 48:
-        x, frame, flip = 210, 936, False
-    elif i < 88:
-        x, frame, flip = round(210 - 164 * (i - 48) / 39), 975 + (i // 2) % 4, True
+    if i < 48:
+        x, frame, flip = round(30 + 204 * i / 47), 975 + (i // 2) % 4, False
+    elif i < 64:
+        x, frame, flip = 234, 936, False
+    elif i < 112:
+        x, frame, flip = round(234 - 204 * (i - 64) / 47), 975 + (i // 2) % 4, True
     else:
-        x, frame, flip = 46, 936, False
-    paste(scene, character(frame, flip), (x, 78))
+        x, frame, flip = 30, 936, False
+    paste(scene, character(frame, flip), (x, 74))
     frames.append(scene.resize((840, 288), Image.Resampling.NEAREST).convert('RGB'))
 
 # A shared palette keeps stationary artwork stable throughout the loop.
