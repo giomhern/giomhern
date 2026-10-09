@@ -2,7 +2,7 @@ import { scaleFactor, dialogueData } from "./constants";
 import { k } from "./kaboomCtx";
 import { displayDialogue, setCamScale } from "./utils";
 
-k.loadSprite("spritesheet", "./spritesheet.png", {
+k.loadSprite("adventure-sprites", "./adventure-sprites.png", {
   sliceX: 39,
   sliceY: 31,
   // hookup to specific animations
@@ -16,24 +16,386 @@ k.loadSprite("spritesheet", "./spritesheet.png", {
   },
 });
 
-k.loadSprite("map", "./map.png");
+k.loadShader("dark-brown-hair", undefined, `
+  uniform vec2 u_texel;
+
+  bool matches(vec4 pixel, vec3 rgb) {
+    return pixel.a > 0.5 && distance(pixel.rgb, rgb / 255.0) < 0.01;
+  }
+
+  vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
+    vec4 pixel = def_frag();
+    bool hair = matches(pixel, vec3(178.0, 92.0, 52.0));
+    bool hairOutline = false;
+    if (matches(pixel, vec3(49.0, 16.0, 71.0))) {
+      bool adjacentHair = false;
+      bool diagonalHair = false;
+      bool adjacentSkin = false;
+      for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+          if (x == 0 && y == 0) continue;
+          vec4 neighbor = texture2D(tex, uv + vec2(float(x), float(y)) * u_texel);
+          bool neighborHair = matches(neighbor, vec3(178.0, 92.0, 52.0));
+          if (x == 0 || y == 0) {
+            adjacentHair = adjacentHair || neighborHair;
+            adjacentSkin = adjacentSkin || matches(neighbor, vec3(226.0, 174.0, 96.0));
+          } else {
+            diagonalHair = diagonalHair || neighborHair;
+          }
+        }
+      }
+      // Preserve facial features that only touch the hair diagonally.
+      hairOutline = adjacentHair || (diagonalHair && !adjacentSkin);
+    }
+    if (hair || hairOutline) {
+      pixel.rgb = vec3(30.0, 20.0, 16.0) / 255.0;
+    }
+    return pixel;
+  }
+`);
+
+k.loadSprite("map-tiles", "./adventure-sprites.png", {
+  sliceX: 39,
+  sliceY: 31,
+});
+k.loadSpriteAtlas("./adventure-sprites.png", {
+  "living-room-sofa": { x: 496, y: 80, width: 32, height: 16 },
+  "bedroom-chair": { x: 544, y: 48, width: 16, height: 32 },
+  "bedroom-certificate": { x: 528, y: 16, width: 16, height: 16 },
+});
+k.loadSpriteAtlas("./furniture-sprites.png", {
+  "hallway-plant": { x: 192, y: 112, width: 16, height: 48 },
+  "hallway-shelf": { x: 168, y: 48, width: 24, height: 32 },
+  "hallway-bench": { x: 144, y: 112, width: 32, height: 16 },
+  "hallway-rug": { x: 128, y: 80, width: 32, height: 16 },
+  "bedroom-curtains": { x: 128, y: 160, width: 32, height: 32 },
+  "bedroom-bed": { x: 0, y: 128, width: 48, height: 48 },
+  "bedroom-tv": { x: 208, y: 0, width: 10, height: 48 },
+  "living-room-tv": { x: 192, y: 80, width: 32, height: 32 },
+  "bedroom-rug": { x: 96, y: 128, width: 32, height: 48 },
+  "living-room-rug": { x: 48, y: 144, width: 48, height: 32 },
+  "living-room-cabinet": { x: 128, y: 128, width: 48, height: 32 },
+  "living-room-aquarium": { x: 160, y: 160, width: 48, height: 32 },
+  "bedroom-easel": { x: 48, y: 176, width: 16, height: 32 },
+  "bedroom-side-desk": { x: 32, y: 176, width: 16, height: 32 },
+  "bedroom-stool": { x: 128, y: 48, width: 16, height: 32 },
+});
+k.loadSpriteAtlas("./small-items-sprites.png", {
+  "bedroom-window": { x: 0, y: 16, width: 16, height: 32 },
+  "bedroom-board": { x: 0, y: 64, width: 32, height: 16 },
+});
 k.setBackground(k.Color.fromHex("#311047"));
 
 k.scene("main", async () => {
   // async function to load the map
   const mapData = await (await fetch("./map.json")).json();
   const layers = mapData.layers;
+  const wallHeight =
+    mapData.properties?.find((property) => property.name === "wallHeight")
+      ?.value ?? 1;
 
   const map = k.add([
-    k.sprite("map"),
     // position of game object when displayed
     k.pos(0),
     k.scale(scaleFactor),
   ]);
 
+  // Render the editable map layers so furniture and collision data stay together.
+  for (const layer of layers) {
+    if (layer.type !== "tilelayer" || !layer.visible) continue;
+    layer.data.forEach((tile, index) => {
+      if (!tile) return;
+      const isWall = [27, 28, 29].includes(tile);
+      map.add([
+        k.sprite("map-tiles", { frame: tile - 1 }),
+        k.scale(1, isWall ? wallHeight : 1),
+        k.pos(
+          (index % layer.width) * mapData.tilewidth,
+          // Extend walls upward without moving the floor-facing edge.
+          Math.floor(index / layer.width) * mapData.tileheight -
+            (isWall ? (wallHeight - 1) * mapData.tileheight : 0),
+        ),
+      ]);
+    });
+  }
+
+  // Center the matching horizontal rug in the living room, with no collision.
+  const boundaries = layers.find(
+    (layer) => layer.name === "boundaries",
+  ).objects;
+  const livingRoomWall = boundaries.find((boundary) => boundary.id === 16);
+  const livingRoomBottom = boundaries.find((boundary) => boundary.id === 4).y;
+  const livingRoomCenter = livingRoomWall.x + livingRoomWall.width / 2;
+  const livingRoomRugTop =
+    (livingRoomWall.y + livingRoomWall.height + livingRoomBottom) / 2 - 16;
+  map.add([
+    k.sprite("living-room-rug"),
+    k.pos(livingRoomCenter - 24, livingRoomRugTop + 6),
+  ]);
+
+  // Share the same close-set windows, mirrored right pane, and curtains in both rooms.
+  function addWindowSet(wall, center) {
+    const windowScale = wall.height / 32;
+    for (let index = 0; index < 2; index++) {
+      map.add([
+        k.sprite("bedroom-window", { flipX: index === 1 }),
+        k.scale(windowScale),
+        k.pos(center - 14 * windowScale + index * 12 * windowScale, wall.y),
+      ]);
+    }
+    map.add([
+      k.sprite("bedroom-curtains"),
+      k.scale(windowScale),
+      k.pos(center - 16 * windowScale, wall.y),
+      k.z(1),
+    ]);
+  }
+  const livingWindowCenters = [0.25, 0.75].map(
+    (fraction) => livingRoomWall.x + livingRoomWall.width * fraction,
+  );
+  for (const center of livingWindowCenters) {
+    addWindowSet(livingRoomWall, center);
+  }
+  const livingFurnitureScale = 0.75;
+  for (const [index, sprite] of [
+    "living-room-cabinet",
+    "living-room-aquarium",
+  ].entries()) {
+    map.add([
+      k.sprite(sprite),
+      k.pos(
+        livingWindowCenters[index] - 24 * livingFurnitureScale,
+        livingRoomWall.y + livingRoomWall.height - 8,
+      ),
+      k.scale(livingFurnitureScale),
+      k.z(2),
+      k.area({ shape: new k.Rect(k.vec2(2, 16), 44, 16) }),
+      k.body({ isStatic: true }),
+    ]);
+  }
+  // Center the larger sofa slightly lower on the rug.
+  const sofaScale = 1.25;
+  map.add([
+    k.sprite("living-room-sofa"),
+    k.pos(livingRoomCenter - 16 * sofaScale, livingRoomRugTop - 3),
+    k.scale(sofaScale),
+    k.z(2),
+    k.area({ shape: new k.Rect(k.vec2(1, 4), 30, 12) }),
+    k.body({ isStatic: true }),
+  ]);
+  // The back-facing TV sits below the sofa, with its screen facing the seats.
+  const livingRoomTvScale = 0.75;
+  const livingRoomTvX = livingRoomCenter - 16 * livingRoomTvScale;
+  const livingRoomTvY = livingRoomBottom - 32 * livingRoomTvScale - 10;
+  // Share the player's parent so depth can follow which side they stand on.
+  const livingRoomTv = k.add([
+    k.sprite("living-room-tv"),
+    k.pos(
+      map.pos.x + livingRoomTvX * scaleFactor,
+      map.pos.y + livingRoomTvY * scaleFactor,
+    ),
+    k.scale(scaleFactor * livingRoomTvScale),
+    k.z(2),
+    // Only the bottom edge blocks movement; the screen can overlap the player.
+    k.area({ shape: new k.Rect(k.vec2(2, 28), 28, 4) }),
+    k.body({ isStatic: true }),
+  ]);
+  const bedroomWall = boundaries.find((boundary) => boundary.id === 13);
+  addWindowSet(bedroomWall, bedroomWall.x + bedroomWall.width / 4);
+  const boardCenter = bedroomWall.x + bedroomWall.width * 0.75;
+  const certificateScale = 0.75;
+  map.add([
+    k.sprite("bedroom-certificate"),
+    k.pos(
+      bedroomWall.x + bedroomWall.width / 2 - 8 * certificateScale - 2,
+      bedroomWall.y + (bedroomWall.height - 16 * certificateScale) / 2,
+    ),
+    k.scale(certificateScale),
+  ]);
+  map.add([
+    k.sprite("bedroom-board"),
+    k.pos(boardCenter - 16, bedroomWall.y + (bedroomWall.height - 16) / 2),
+  ]);
+
+  const bedroomRight = bedroomWall.x + bedroomWall.width;
+  const bedroomBottom = layers
+    .find((layer) => layer.name === "boundaries")
+    .objects.find((boundary) => boundary.id === 15).y;
+  const bedroomFloorTop = bedroomWall.y + bedroomWall.height;
+  // Test the player's center, rather than a broad collision box, for precise approaches.
+  const approachZones = [
+    { tag: "cs-degree", x: bedroomWall.x + bedroomWall.width / 2 - 2,
+      halfWidth: 6, top: bedroomFloorTop + 4, bottom: bedroomFloorTop + 7 },
+    { tag: "bedroom-board", x: boardCenter,
+      halfWidth: 12, top: bedroomFloorTop + 4, bottom: bedroomFloorTop + 7 },
+    { tag: "tv", x: livingRoomCenter,
+      halfWidth: 4, top: livingRoomTvY + 8, bottom: livingRoomTvY + 18 },
+  ];
+  let activeApproaches = new Set();
+  // Draw the rug before furniture, without a collision area.
+  map.add([
+    k.sprite("bedroom-rug"),
+    k.pos(
+      (bedroomWall.x + bedroomRight) / 2 - 16,
+      (bedroomFloorTop + bedroomBottom) / 2 - 24,
+    ),
+  ]);
+  const bedroomFurnitureScale = 0.75;
+  // Place the side-facing desk along the left wall, behind the hallway plant.
+  map.add([
+    k.sprite("bedroom-side-desk"),
+    k.pos(bedroomWall.x - 1.5, bedroomFloorTop),
+    k.scale(bedroomFurnitureScale),
+    k.area({ shape: new k.Rect(k.vec2(3, 4), 10, 28) }),
+    k.body({ isStatic: true }),
+  ]);
+  map.add([
+    k.sprite("bedroom-easel"),
+    k.pos(boardCenter - 8 * bedroomFurnitureScale + 4, bedroomFloorTop + 12),
+    k.scale(bedroomFurnitureScale),
+    k.area({ shape: new k.Rect(k.vec2(3, 22), 10, 10) }),
+    k.body({ isStatic: true }),
+  ]);
+  const bedLeft = bedroomRight - 48 * bedroomFurnitureScale;
+  const bedTop = bedroomBottom - 48 * bedroomFurnitureScale;
+  // Use the drawn horizontal bed variant, with the headboard against the right wall.
+  map.add([
+    k.sprite("bedroom-bed"),
+    k.pos(bedLeft, bedTop),
+    k.scale(bedroomFurnitureScale),
+  ]);
+  map.add([
+    k.pos(
+      bedLeft + 2 * bedroomFurnitureScale,
+      bedTop + 6 * bedroomFurnitureScale,
+    ),
+    k.scale(bedroomFurnitureScale),
+    k.area({ shape: new k.Rect(k.vec2(0), 44, 40) }),
+    k.body({ isStatic: true }),
+    "bed",
+  ]);
+  // The side-view TV already faces the bed; keep its original orientation.
+  const tvLeft = bedLeft - 10 * bedroomFurnitureScale - 4;
+  const tvTop = bedTop;
+  map.add([
+    k.sprite("bedroom-tv"),
+    k.pos(tvLeft, tvTop),
+    k.scale(bedroomFurnitureScale),
+  ]);
+  map.add([
+    k.pos(tvLeft + bedroomFurnitureScale, tvTop + 16 * bedroomFurnitureScale),
+    k.scale(bedroomFurnitureScale),
+    k.area({ shape: new k.Rect(k.vec2(0), 8, 32) }),
+    k.body({ isStatic: true }),
+  ]);
+
+  // Draw the stool first so the computer overlaps it in front.
+  map.add([
+    k.sprite("bedroom-stool"),
+    k.pos(
+      (bedroomWall.x + tvLeft) / 2 - 8 * bedroomFurnitureScale + 0.25,
+      bedroomBottom - 48 * bedroomFurnitureScale + 8,
+    ),
+    k.scale(bedroomFurnitureScale),
+  ]);
+  // Center the computer in the open space to the left of the TV and bed.
+  map.add([
+    k.sprite("bedroom-chair"),
+    k.pos(
+      (bedroomWall.x + tvLeft) / 2 - 8 * bedroomFurnitureScale,
+      bedroomBottom - 32 * bedroomFurnitureScale + 1,
+    ),
+    k.scale(bedroomFurnitureScale),
+  ]);
+  // Treat the whole computer-and-stool setup as one solid interaction section.
+  const computerSectionTop = bedroomBottom - 48 * bedroomFurnitureScale + 8;
+  map.add([
+    k.pos(
+      (bedroomWall.x + tvLeft) / 2 - 8 * bedroomFurnitureScale,
+      computerSectionTop,
+    ),
+    k.area({
+      shape: new k.Rect(
+        k.vec2(0),
+        16 * bedroomFurnitureScale + 0.25,
+        bedroomBottom + 1 - computerSectionTop,
+      ),
+    }),
+    k.body({ isStatic: true }),
+    "pc",
+  ]);
+
+  // Align the solid pot edges with the hallway's four corners.
+  const plantScale = 2 / 3;
+  const hallway = { left: 176, right: 224, top: 112, bottom: 160 };
+  // The rug belongs to the floor layer and has no collision area.
+  map.add([
+    k.sprite("hallway-rug"),
+    k.pos(
+      (hallway.left + hallway.right) / 2 - 16,
+      (hallway.top + hallway.bottom) / 2 - 8,
+    ),
+  ]);
+  for (const horizontal of ["left", "right"]) {
+    for (const vertical of ["top", "bottom"]) {
+      const x =
+        hallway[horizontal] - (horizontal === "left" ? 4 : 13) * plantScale;
+      const y = hallway[vertical] - (vertical === "top" ? 40 : 48) * plantScale;
+      // Plants share the player's parent so their z-order can place foliage in front.
+      k.add([
+        k.sprite("hallway-plant"),
+        k.scale(scaleFactor * plantScale),
+        k.pos(map.pos.x + x * scaleFactor, map.pos.y + y * scaleFactor),
+        k.z(vertical === "bottom" ? 2 : 0.5),
+        // Only the pot is solid, leaving room to walk between the plants.
+        k.area({ shape: new k.Rect(k.vec2(4, 40), 9, 8) }),
+        k.body({ isStatic: true }),
+      ]);
+    }
+  }
+
+  const hallwayCenter = (hallway.left + hallway.right) / 2;
+  for (const furniture of [
+    {
+      sprite: "hallway-shelf",
+      x: hallwayCenter - 12,
+      y: hallway.top - 24,
+      scale: 1,
+      z: 0,
+      base: { x: 2, y: 24, width: 20, height: 8 },
+    },
+    {
+      sprite: "hallway-bench",
+      x: hallwayCenter - 12,
+      y: hallway.bottom - 12,
+      scale: 0.75,
+      z: 2,
+      base: { x: 1, y: 8, width: 30, height: 8 },
+    },
+  ]) {
+    const base = furniture.base;
+    k.add([
+      k.sprite(furniture.sprite),
+      k.pos(
+        map.pos.x + furniture.x * scaleFactor,
+        map.pos.y + furniture.y * scaleFactor,
+      ),
+      k.scale(scaleFactor * furniture.scale),
+      k.z(furniture.z),
+      k.area({
+        shape: new k.Rect(k.vec2(base.x, base.y), base.width, base.height),
+      }),
+      k.body({ isStatic: true }),
+    ]);
+  }
+
   const player = k.make([
-    k.sprite("spritesheet", {
+    k.sprite("adventure-sprites", {
       anim: "idle-down",
+    }),
+    k.shader("dark-brown-hair", () => {
+      const frame = k.getSprite("adventure-sprites").data.frames[0];
+      return { u_texel: k.vec2(frame.w / 16, frame.h / 16) };
     }),
     k.area({
       shape: new k.Rect(k.vec2(0, 3), 10, 10),
@@ -42,6 +404,7 @@ k.scene("main", async () => {
     k.anchor("center"),
     k.pos(),
     k.scale(scaleFactor),
+    k.z(1),
     {
       speed: 250,
       direction: "down",
@@ -62,15 +425,7 @@ k.scene("main", async () => {
           boundary.name,
         ]);
 
-        if (boundary.name) {
-          // want to check collision with this boundary
-          player.onCollide(boundary.name, () => {
-            player.isInDialogue = true;
-            displayDialogue(dialogueData[boundary.name], () => {
-              player.isInDialogue = false;
-            });
-          });
-        }
+
       }
       continue;
     }
@@ -80,13 +435,27 @@ k.scene("main", async () => {
         if (entity.name === "player") {
           player.pos = k.vec2(
             (map.pos.x + entity.x) * scaleFactor,
-            (map.pos.y + entity.y) * scaleFactor
+            (map.pos.y + entity.y) * scaleFactor,
           );
           k.add(player);
           continue;
         }
       }
     }
+  }
+
+  function openFurnitureDialogue(tag) {
+    if (player.isInDialogue) return;
+    player.isInDialogue = true;
+    player.play(`idle-${player.direction === "left" || player.direction === "right" ? "side" : player.direction}`);
+    displayDialogue(dialogueData[tag], () => {
+      player.isInDialogue = false;
+    });
+  }
+
+  for (const tag of Object.keys(dialogueData)) {
+    if (approachZones.some((zone) => zone.tag === tag)) continue;
+    player.onCollide(tag, () => openFurnitureDialogue(tag));
   }
 
   setCamScale(k);
@@ -97,6 +466,19 @@ k.scene("main", async () => {
 
   k.onUpdate(() => {
     k.camPos(player.pos.x, player.pos.y + 100);
+    const playerFeetY = player.pos.y + 5 * scaleFactor;
+    const tvBaseY = livingRoomTv.pos.y + 28 * livingRoomTvScale * scaleFactor;
+    livingRoomTv.z = playerFeetY >= tvBaseY ? 0.5 : 2;
+    const playerX = (player.pos.x - map.pos.x) / scaleFactor;
+    const playerY = (player.pos.y - map.pos.y) / scaleFactor;
+    const nextApproaches = new Set();
+    for (const zone of approachZones) {
+      if (Math.abs(playerX - zone.x) > zone.halfWidth ||
+          playerY < zone.top || playerY > zone.bottom) continue;
+      nextApproaches.add(zone.tag);
+      if (!activeApproaches.has(zone.tag)) openFurnitureDialogue(zone.tag);
+    }
+    activeApproaches = nextApproaches;
   });
 
   k.onMouseDown((mouseBtn) => {
@@ -155,7 +537,8 @@ k.scene("main", async () => {
   });
 
   // Keyboard controls
-  k.keyDown("left", () => {
+  k.onKeyDown("left", () => {
+    if (player.isInDialogue) return;
     player.move(-player.speed, 0);
     if (player.curAnim() !== "walk-side" || player.direction !== "left") {
       player.play("walk-side");
@@ -164,7 +547,8 @@ k.scene("main", async () => {
     }
   });
 
-  k.keyDown("right", () => {
+  k.onKeyDown("right", () => {
+    if (player.isInDialogue) return;
     player.move(player.speed, 0);
     if (player.curAnim() !== "walk-side" || player.direction !== "right") {
       player.play("walk-side");
@@ -173,7 +557,8 @@ k.scene("main", async () => {
     }
   });
 
-  k.keyDown("up", () => {
+  k.onKeyDown("up", () => {
+    if (player.isInDialogue) return;
     player.move(0, -player.speed);
     if (player.curAnim() !== "walk-up") {
       player.play("walk-up");
@@ -181,7 +566,8 @@ k.scene("main", async () => {
     }
   });
 
-  k.keyDown("down", () => {
+  k.onKeyDown("down", () => {
+    if (player.isInDialogue) return;
     player.move(0, player.speed);
     if (player.curAnim() !== "walk-down") {
       player.play("walk-down");
@@ -189,7 +575,14 @@ k.scene("main", async () => {
     }
   });
 
-  k.keyRelease(["left", "right", "up", "down"], () => {
+  k.onKeyRelease((key) => {
+    const arrowKeys = ["left", "right", "up", "down"];
+    if (
+      !arrowKeys.includes(key) ||
+      arrowKeys.some((arrow) => k.isKeyDown(arrow))
+    ) {
+      return;
+    }
     if (player.direction === "left" || player.direction === "right") {
       player.play("idle-side");
     } else if (player.direction === "up") {

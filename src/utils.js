@@ -1,14 +1,26 @@
 export function displayDialogue(text, onDisplayEnd) {
+  const content = typeof text === "string" ? { text } : text;
   const dialogueUI = document.getElementById("textbox-container");
   const dialogue = document.getElementById("dialogue");
   dialogueUI.style.display = "block";
+  dialogue.replaceChildren();
+  const message = document.createElement("span");
+  dialogue.append(message);
+  for (const link of content.links ?? []) {
+    const anchor = document.createElement("a");
+    anchor.textContent = link.label;
+    anchor.href = link.href;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    dialogue.append(document.createElement("br"), anchor);
+  }
 
   let index = 0;
   let currentText = "";
   const intervalRef = setInterval(() => {
-    if (index < text.length) {
-      currentText += text[index];
-      dialogue.innerHTML = currentText;
+    if (index < content.text.length) {
+      currentText += content.text[index];
+      message.textContent = currentText;
       index++;
       return;
     }
@@ -22,9 +34,18 @@ export function displayDialogue(text, onDisplayEnd) {
     dialogue.innerHTML = "";
     clearInterval(intervalRef);
     closeBtn.removeEventListener("click", onCloseBtnClick);
+    document.removeEventListener("keydown", onDialogKeyDown);
+    document.getElementById("game").focus({ preventScroll: true });
+  }
+
+  function onDialogKeyDown(event) {
+    if (event.key !== "Escape" || event.repeat) return;
+    event.preventDefault();
+    onCloseBtnClick();
   }
 
   closeBtn.addEventListener("click", onCloseBtnClick);
+  document.addEventListener("keydown", onDialogKeyDown);
 }
 
 export function setCamScale(k) {
