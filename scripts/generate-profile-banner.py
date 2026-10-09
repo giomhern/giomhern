@@ -59,8 +59,12 @@ for center in (34, 222):
     paste(room, window, (center - 14, 18))
     paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 2, 18))
     paste(room, crop(furniture, 128, 160, 32, 32), (center - 16, 18))
-paste(room, crop(items, 0, 64, 32, 16), (124, 16))
+# Spread wall art between the windows, with breathing room above the furniture.
+paste(room, crop(items, 0, 64, 32, 16), (88, 16))
+paste(room, crop(adventure, 528, 16, 16, 16), (172, 16))
+paste(room, crop(furniture, 168, 48, 24, 32), (80, 40))
 paste(room, crop(furniture, 192, 48, 32, 32), (124, 40))
+paste(room, crop(furniture, 48, 176, 16, 32), (176, 40))
 paste(room, crop(furniture, 192, 112, 16, 48), (252, 30), .75)
 
 frames = []
