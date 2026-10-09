@@ -99,7 +99,10 @@ k.loadShader("map-background", undefined, `
   }
 `);
 
+const gameAssetsReady = new Promise((resolve) => k.onLoad(resolve));
+
 k.scene("main", async () => {
+  await gameAssetsReady;
   // Mobile connections can finish the map request before the character texture.
   const characterSpriteData = await characterSpriteAsset;
   // async function to load the map
@@ -600,6 +603,12 @@ k.scene("main", async () => {
     }
 
     player.play("idle-side");
+  });
+
+  // Reveal touch controls only once the initialized game reaches its first draw.
+  const revealTouchControls = k.onDraw(() => {
+    document.getElementById("touch-controls").hidden = false;
+    revealTouchControls.cancel();
   });
 
   // Keyboard controls
