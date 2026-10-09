@@ -529,7 +529,7 @@ k.scene("main", async () => {
       player.play(`idle-${["left", "right"].includes(player.direction) ? "side" : player.direction}`);
     }
     touchWasMoving = directions.size > 0;
-    const cameraOffset = Math.max(0, Math.min(100, k.height() / (2 * k.camScale().y) - 64));
+    const cameraOffset = Math.max(0, Math.min(30, k.height() / (2 * k.camScale().y) - 64));
     k.camPos(player.pos.x, player.pos.y + cameraOffset);
     const playerFeetY = player.pos.y + 5 * scaleFactor;
     const tvBaseY = livingRoomTv.pos.y + 28 * livingRoomTvScale * scaleFactor;
