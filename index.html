@@ -2,9 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=character" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gio's Portfolio</title>
+    <title>Giovanni Maya</title>
   </head>
   <body>
     <style>
@@ -62,24 +62,103 @@
         margin-top: 1rem;
       }
 
-      .note {
-        position: absolute;
-        left: 5%;
-        top: 1vh;
-        display: flex;
-        flex-direction: column;
-        color: rgb(238, 238, 238);
-        user-select: none;
+      #help-button {
+        position: fixed;
+        bottom: max(16px, env(safe-area-inset-bottom));
+        right: max(16px, env(safe-area-inset-right));
+        z-index: 10;
+        padding: 8px 12px;
+        min-height: 44px;
+        font: inherit;
+        font-size: 1.5rem;
+        color: #502c32;
+        background: #fff0bc;
+        border: 3px solid #502c32;
+        border-radius: 0;
+        box-shadow: inset 2px 2px 0 #fff9df, 0 3px 0 #86432e;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      #help-button:active { transform: translateY(2px); }
+      #help-button:focus-visible { outline: 3px solid #e5ac64; outline-offset: 3px; }
+      #help-button:disabled { opacity: 0.5; cursor: default; }
+      #touch-controls { display: none; }
+      #textbox-container { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+      #textbox { max-height: 65dvh; overflow-y: auto; pointer-events: auto; }
+      @media (any-pointer: coarse) {
+        #help-button, .esc-hint { display: none; }
+        #touch-controls {
+          position: fixed;
+          left: max(16px, env(safe-area-inset-left));
+          bottom: max(16px, env(safe-area-inset-bottom));
+          z-index: 10;
+          display: grid;
+          grid-template-columns: repeat(3, 52px);
+          grid-template-rows: repeat(3, 52px);
+          gap: 6px;
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        #touch-controls button {
+          position: relative;
+          display: grid;
+          place-items: center;
+          padding: 0;
+          font-size: 0;
+          background: #b66b40;
+          border: 3px solid #502c32;
+          border-radius: 0;
+          box-shadow: inset 3px 3px 0 #e5ac64, inset -3px -3px 0 #86432e,
+            0 4px 0 #311047, 0 6px 0 rgb(24 15 29 / 35%);
+          touch-action: none;
+          -webkit-touch-callout: none;
+        }
+        #touch-controls button::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          margin-left: -12px;
+          margin-top: -12px;
+          width: 24px;
+          height: 24px;
+          background: #fff0bc;
+          clip-path: polygon(40% 0, 60% 0, 60% 20%, 80% 20%, 80% 40%,
+            100% 40%, 100% 60%, 65% 60%, 65% 100%, 35% 100%,
+            35% 60%, 0 60%, 0 40%, 20% 40%, 20% 20%, 40% 20%);
+        }
+        #touch-controls [data-direction="left"]::after { transform: rotate(-90deg); }
+        #touch-controls [data-direction="right"]::after { transform: rotate(90deg); }
+        #touch-controls [data-direction="down"]::after { transform: rotate(180deg); }
+        #touch-controls button.pressed {
+          transform: translateY(3px);
+          background: #945039;
+          box-shadow: inset 3px 3px 0 #753e32, inset -3px -3px 0 #c5834c,
+            0 1px 0 #311047;
+        }
+        #touch-controls button:focus-visible { outline: 3px solid #fff0bc; outline-offset: 3px; }
+        #touch-controls button:disabled { opacity: 0.35; }
+        [data-direction="up"] { grid-area: 1 / 2; }
+        [data-direction="left"] { grid-area: 2 / 1; }
+        [data-direction="right"] { grid-area: 2 / 3; }
+        [data-direction="down"] { grid-area: 3 / 2; }
       }
     </style>
     <div id="app">
       <div class="ui">
-        <p class="note">Tap/Click around or use arrow keys to move</p>
+        <button id="help-button" type="button" aria-haspopup="dialog">How to navigate</button>
+        <nav id="touch-controls" aria-label="Movement controls">
+          <button type="button" data-direction="up" aria-label="Move up">▲</button>
+          <button type="button" data-direction="left" aria-label="Move left">◀</button>
+          <button type="button" data-direction="right" aria-label="Move right">▶</button>
+          <button type="button" data-direction="down" aria-label="Move down">▼</button>
+        </nav>
         <div id="textbox-container" style="display: none">
-          <div id="textbox">
+          <div id="textbox" role="dialog" aria-modal="true" aria-label="Game dialog">
             <p id="dialogue" class="ui-text"></p>
             <div class="btn-container">
-              <button id="close" class="ui-close-btn" aria-keyshortcuts="Escape">Close (Esc)</button>
+              <button id="close" class="ui-close-btn" aria-keyshortcuts="Escape">Close<span class="esc-hint"> (Esc)</span></button>
             </div>
           </div>
         </div>

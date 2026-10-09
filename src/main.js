@@ -1,6 +1,9 @@
 import { scaleFactor, dialogueData } from "./constants";
 import { k } from "./kaboomCtx";
 import { displayDialogue, setCamScale } from "./utils";
+import { setupTouchControls } from "./touchControls";
+
+const touchControls = setupTouchControls(document.getElementById("touch-controls"));
 
 k.loadSprite("adventure-sprites", "./adventure-sprites.png", {
   sliceX: 39,
@@ -84,7 +87,17 @@ k.loadSpriteAtlas("./small-items-sprites.png", {
   "bedroom-window": { x: 0, y: 16, width: 16, height: 32 },
   "bedroom-board": { x: 0, y: 64, width: 32, height: 16 },
 });
-k.setBackground(k.Color.fromHex("#311047"));
+k.setBackground(k.Color.fromHex("#302321"));
+k.loadShader("map-background", undefined, `
+  vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
+    vec4 pixel = def_frag();
+    // Edge tiles contain the original purple background as opaque pixels.
+    if (distance(pixel.rgb, vec3(49.0, 16.0, 71.0) / 255.0) < 0.01) {
+      pixel.rgb = vec3(48.0, 35.0, 33.0) / 255.0;
+    }
+    return pixel;
+  }
+`);
 
 k.scene("main", async () => {
   // async function to load the map
@@ -108,6 +121,7 @@ k.scene("main", async () => {
       const isWall = [27, 28, 29].includes(tile);
       map.add([
         k.sprite("map-tiles", { frame: tile - 1 }),
+        k.shader("map-background"),
         k.scale(1, isWall ? wallHeight : 1),
         k.pos(
           (index % layer.width) * mapData.tilewidth,
@@ -222,14 +236,15 @@ k.scene("main", async () => {
     .find((layer) => layer.name === "boundaries")
     .objects.find((boundary) => boundary.id === 15).y;
   const bedroomFloorTop = bedroomWall.y + bedroomWall.height;
-  // Test the player's center, rather than a broad collision box, for precise approaches.
+  // The player's collision box stops their center two units below the wall.
+  // Keep wall interactions around that reachable position, directly below the art.
   const approachZones = [
     { tag: "cs-degree", x: bedroomWall.x + bedroomWall.width / 2 - 2,
-      halfWidth: 6, top: bedroomFloorTop + 4, bottom: bedroomFloorTop + 7 },
+      halfWidth: 6, top: bedroomFloorTop, bottom: bedroomFloorTop + 4 },
     { tag: "bedroom-board", x: boardCenter,
-      halfWidth: 12, top: bedroomFloorTop + 4, bottom: bedroomFloorTop + 7 },
+      halfWidth: 12, top: bedroomFloorTop, bottom: bedroomFloorTop + 4 },
     { tag: "tv", x: livingRoomCenter,
-      halfWidth: 4, top: livingRoomTvY + 8, bottom: livingRoomTvY + 18 },
+      halfWidth: 7, top: livingRoomTvY + 6, bottom: livingRoomTvY + 18 },
   ];
   let activeApproaches = new Set();
   // Draw the rug before furniture, without a collision area.
@@ -253,7 +268,7 @@ k.scene("main", async () => {
     k.sprite("bedroom-easel"),
     k.pos(boardCenter - 8 * bedroomFurnitureScale + 4, bedroomFloorTop + 12),
     k.scale(bedroomFurnitureScale),
-    k.area({ shape: new k.Rect(k.vec2(3, 22), 10, 10) }),
+    k.area({ shape: new k.Rect(k.vec2(0), 16, 32) }),
     k.body({ isStatic: true }),
   ]);
   const bedLeft = bedroomRight - 48 * bedroomFurnitureScale;
@@ -444,13 +459,42 @@ k.scene("main", async () => {
     }
   }
 
-  function openFurnitureDialogue(tag) {
+  const helpButton = document.getElementById("help-button");
+  function openGameDialogue(content) {
     if (player.isInDialogue) return;
     player.isInDialogue = true;
+    touchControls.setDisabled(true);
     player.play(`idle-${player.direction === "left" || player.direction === "right" ? "side" : player.direction}`);
-    displayDialogue(dialogueData[tag], () => {
+    helpButton.disabled = true;
+    displayDialogue(content, () => {
       player.isInDialogue = false;
+      touchControls.setDisabled(false);
+      helpButton.disabled = false;
     });
+  }
+
+  function openFurnitureDialogue(tag) {
+    openGameDialogue(dialogueData[tag]);
+  }
+  function showHelp() {
+    const isTouch = window.matchMedia("(any-pointer: coarse)").matches;
+    openGameDialogue(isTouch
+      ? "Tap and hold the D-pad to move."
+      : "Use the arrow keys or click a destination to move. Press Escape to close dialogs.");
+  }
+  helpButton.addEventListener("pointerdown", (event) => event.stopPropagation());
+  helpButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    showHelp();
+  });
+  // Storage can be unavailable in private browsing; help remains accessible.
+  try {
+    if (!window.matchMedia("(any-pointer: coarse)").matches && !localStorage.getItem("portfolio-help-seen")) {
+      showHelp();
+      localStorage.setItem("portfolio-help-seen", "true");
+    }
+  } catch {
+    if (!window.matchMedia("(any-pointer: coarse)").matches) showHelp();
   }
 
   for (const tag of Object.keys(dialogueData)) {
@@ -464,7 +508,25 @@ k.scene("main", async () => {
     setCamScale(k);
   });
 
+  let touchWasMoving = false;
   k.onUpdate(() => {
+    const directions = touchControls.directions();
+    if (!player.isInDialogue && directions.size) {
+      const x = Number(directions.has("right")) - Number(directions.has("left"));
+      const y = Number(directions.has("down")) - Number(directions.has("up"));
+      if (x || y) {
+        const length = Math.hypot(x, y);
+        player.move(x / length * player.speed, y / length * player.speed);
+        const direction = x ? (x < 0 ? "left" : "right") : (y < 0 ? "up" : "down");
+        const anim = x ? "walk-side" : `walk-${direction}`;
+        if (player.curAnim() !== anim) player.play(anim);
+        if (x) player.flipX = x < 0;
+        player.direction = direction;
+      }
+    } else if (touchWasMoving && !["left", "right", "up", "down"].some((key) => k.isKeyDown(key))) {
+      player.play(`idle-${["left", "right"].includes(player.direction) ? "side" : player.direction}`);
+    }
+    touchWasMoving = directions.size > 0;
     k.camPos(player.pos.x, player.pos.y + 100);
     const playerFeetY = player.pos.y + 5 * scaleFactor;
     const tvBaseY = livingRoomTv.pos.y + 28 * livingRoomTvScale * scaleFactor;
@@ -482,7 +544,7 @@ k.scene("main", async () => {
   });
 
   k.onMouseDown((mouseBtn) => {
-    if (mouseBtn !== "left" || player.isInDialogue) return;
+    if (mouseBtn !== "left" || player.isInDialogue || touchControls.directions().size) return;
     const worldMousePos = k.toWorld(k.mousePos());
     player.moveTo(worldMousePos, player.speed);
 
