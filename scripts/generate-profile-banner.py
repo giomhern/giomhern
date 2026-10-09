@@ -1,6 +1,6 @@
 """Compose the profile GIF from the game's existing sprites (requires Pillow)."""
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 adventure = Image.open(ROOT / 'public/adventure-sprites.png').convert('RGBA')
@@ -45,10 +45,6 @@ def character(frame, flip=False):
     return sprite.transpose(Image.Transpose.FLIP_LEFT_RIGHT) if flip else sprite
 
 
-def font(size):
-    return ImageFont.truetype(str(ROOT / 'public/monogram.ttf'), size)
-
-
 # A quiet home backdrop: tall cream wall, narrow floor, one window and plant.
 room = Image.new('RGBA', (280, 96), BG)
 floor = crop(adventure, 432, 16, 16, 16)
@@ -64,20 +60,6 @@ paste(room, window, (center - 14, 18))
 paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 2, 18))
 paste(room, crop(furniture, 128, 160, 32, 32), (center - 16, 18))
 paste(room, crop(furniture, 192, 112, 16, 48), (252, 30), .75)
-
-# A wall-mounted nameplate uses the exact font bundled with the portfolio.
-draw = ImageDraw.Draw(room)
-draw.rectangle((66, 18, 214, 50), fill='#502c32')
-draw.rectangle((68, 20, 212, 48), fill='#b66b40')
-draw.rectangle((70, 22, 210, 46), fill=BG)
-for text, y, size, color in [
-    ('Giovanni Maya', 19, 20, '#f7efba'),
-    ('software, data & creativity.', 35, 10, '#e2ae60'),
-]:
-    text_font = font(size)
-    width = draw.textlength(text, font=text_font)
-    draw.fontmode = '1'
-    draw.text((round((280 - width) / 2), y), text, font=text_font, fill=color)
 
 frames = []
 for i in range(128):

@@ -1,11 +1,13 @@
 <a href="https://giomhern.vercel.app">
   <picture>
     <source media="(prefers-reduced-motion: reduce)" srcset="assets/profile-header.png" />
-    <img src="assets/profile-header.gif" alt="Giovanni Maya — software, data, and a little creativity. My pixel character taking a stroll through the living room." width="840" />
+    <img src="assets/profile-header.gif" alt="My pixel character walking through a cozy home, pausing to face you." width="840" />
   </picture>
 </a>
 
-CS + Data Science at **UChicago**. I like building useful things and making them cool.
+## Hi, I'm Giovanni 👋
+
+I'm studying **Computer Science and Data Science at UChicago**. I like building useful things and making them cool.
 
 I've worked on data pipelines, backend services, mobile apps, and robots through internships at **Shopify, Twilio, Microsoft**, and research at UChicago's
 **Human-Robot Interaction Lab**.
