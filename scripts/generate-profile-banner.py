@@ -46,59 +46,68 @@ def character(frame, flip=False):
 
 
 def font(size):
-    for path in ['/System/Library/Fonts/Menlo.ttc', '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf']:
-        if Path(path).exists():
-            return ImageFont.truetype(path, size)
-    return ImageFont.load_default(size=size)
+    return ImageFont.truetype(str(ROOT / 'public/monogram.ttf'), size)
 
 
-base = Image.new('RGBA', (840, 240), BG)
-draw = ImageDraw.Draw(base)
-draw.rectangle((0, 0, 35, 3), fill='#e2ae60')
-draw.rectangle((0, 0, 3, 35), fill='#e2ae60')
-draw.rectangle((804, 236, 839, 239), fill='#e2ae60')
-draw.rectangle((836, 204, 839, 239), fill='#e2ae60')
-draw.text((32, 76), 'Giovanni Maya', font=font(32), fill='#f7efba')
-draw.text((34, 124), 'software, data, and a little creativity.', font=font(17), fill='#d1ae94')
-
-# A compact living-room vignette using the same floor, windows, rug and sofa.
-room = Image.new('RGBA', (80, 64), BG)
+# Draw at native pixel scale, then enlarge without smoothing like the game.
+room = Image.new('RGBA', (280, 96), BG)
 floor = crop(adventure, 432, 16, 16, 16)
-wall = crop(adventure, 432, 0, 16, 16)
-for x in range(0, 80, 16):
+wall = crop(adventure, 432, 0, 16, 16).resize((16, 32), Image.Resampling.NEAREST)
+for x in range(0, 280, 16):
     paste(room, wall, (x, 0))
-    for y in range(16, 64, 16):
+    for y in range(32, 96, 16):
         paste(room, floor, (x, y))
-for center in (18, 60):
+
+# Familiar furniture forms the whole banner, rather than a separate thumbnail.
+for center in (34, 246):
     window = crop(items, 0, 16, 16, 32)
-    paste(room, window, (center - 7, 0), .5)
-    paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 1, 0), .5)
-    paste(room, crop(furniture, 128, 160, 32, 32), (center - 8, 0), .5)
-paste(room, crop(furniture, 128, 128, 48, 32), (6, 6), .5)
-paste(room, crop(furniture, 160, 160, 48, 32), (48, 6), .5)
-paste(room, crop(furniture, 48, 144, 48, 32), (16, 29))
-paste(room, crop(adventure, 496, 80, 32, 16), (24, 25))
+    paste(room, window, (center - 10, 2), .75)
+    paste(room, window.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (center - 1, 2), .75)
+    paste(room, crop(furniture, 128, 160, 32, 32), (center - 12, 2), .75)
+paste(room, crop(furniture, 128, 128, 48, 32), (16, 23), .75)
+paste(room, crop(furniture, 160, 160, 48, 32), (228, 23), .75)
+paste(room, crop(furniture, 48, 144, 48, 32), (116, 52))
+paste(room, crop(adventure, 496, 80, 32, 16), (120, 43), 1.25)
+paste(room, crop(furniture, 0, 128, 48, 48), (230, 56), .75)
+paste(room, crop(furniture, 48, 176, 16, 32), (202, 44), .75)
+paste(room, crop(furniture, 168, 48, 24, 32), (66, 34), .75)
+for x in (3, 268):
+    paste(room, crop(furniture, 192, 112, 16, 48), (x, 41), .75)
+
+# A wall-mounted nameplate uses the exact font bundled with the portfolio.
+draw = ImageDraw.Draw(room)
+draw.rectangle((66, 2, 214, 30), fill='#502c32')
+draw.rectangle((68, 4, 212, 28), fill='#b66b40')
+draw.rectangle((70, 6, 210, 26), fill=BG)
+for text, y, size, color in [
+    ('Giovanni Maya', 1, 20, '#f7efba'),
+    ('software, data & creativity.', 16, 10, '#e2ae60'),
+]:
+    text_font = font(size)
+    width = draw.textlength(text, font=text_font)
+    # Monochrome glyph masks preserve crisp pixel edges.
+    draw.fontmode = '1'
+    draw.text((round((280 - width) / 2), y), text, font=text_font, fill=color)
 
 frames = []
-for i in range(80):
+for i in range(96):
     scene = room.copy()
-    if i < 32:
-        x, frame, flip = round(8 + 48 * i / 31), 975 + (i // 2) % 4, False
-    elif i < 40:
-        x, frame, flip = 56, 936, False
-    elif i < 72:
-        x, frame, flip = round(56 - 48 * (i - 40) / 31), 975 + (i // 2) % 4, True
+    if i < 40:
+        x, frame, flip = round(46 + 164 * i / 39), 975 + (i // 2) % 4, False
+    elif i < 48:
+        x, frame, flip = 210, 936, False
+    elif i < 88:
+        x, frame, flip = round(210 - 164 * (i - 48) / 39), 975 + (i // 2) % 4, True
     else:
-        x, frame, flip = 8, 936, False
-    paste(scene, character(frame, flip), (x, 46))
-    banner = base.copy()
-    paste(banner, scene, (568, 24), 3)
-    frames.append(banner.convert('RGB'))
+        x, frame, flip = 46, 936, False
+    paste(scene, character(frame, flip), (x, 78))
+    frames.append(scene.resize((840, 288), Image.Resampling.NEAREST).convert('RGB'))
 
 # A shared palette keeps stationary artwork stable throughout the loop.
 palette = frames[0].quantize(colors=128)
 indexed = [frame.quantize(palette=palette, dither=Image.Dither.NONE) for frame in frames]
 indexed[0].save(ROOT / 'assets/profile-header.gif', save_all=True,
                 append_images=indexed[1:], duration=125, loop=0, optimize=True, disposal=1)
+frames[0].save(ROOT / 'assets/profile-header.png')
 frames[0].save('/tmp/profile-banner-preview.png')
-print('Generated assets/profile-header.gif')
+print('Generated animated and static full-scene banners.')

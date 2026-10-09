@@ -1,6 +1,6 @@
 <a href="https://giomhern.vercel.app">
   <picture>
-    <source media="(prefers-reduced-motion: reduce)" srcset="assets/profile-header.svg" />
+    <source media="(prefers-reduced-motion: reduce)" srcset="assets/profile-header.png" />
     <img src="assets/profile-header.gif" alt="Giovanni Maya — software, data, and a little creativity. My pixel character taking a stroll through the living room." width="840" />
   </picture>
 </a>
