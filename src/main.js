@@ -547,6 +547,7 @@ k.scene("main", async () => {
   });
 
   k.onMouseDown((mouseBtn) => {
+    if (window.matchMedia("(any-pointer: coarse)").matches) return;
     if (mouseBtn !== "left" || player.isInDialogue || touchControls.directions().size) return;
     const worldMousePos = k.toWorld(k.mousePos());
     player.moveTo(worldMousePos, player.speed);
