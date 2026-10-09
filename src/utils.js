@@ -22,7 +22,7 @@ export function displayDialogue(text, onDisplayEnd) {
       const segment = segments[segmentIndex];
       if (!segment.element) {
         segment.element = document.createElement("span");
-        segment.element.className = "dialogue-link";
+        segment.element.className = segment.link.inline ? "dialogue-link inline-link" : "dialogue-link";
         dialogue.append(segment.element);
       }
       segment.element.textContent = segment.text.slice(0, ++index);
@@ -31,7 +31,7 @@ export function displayDialogue(text, onDisplayEnd) {
       // Keep link text plain while typing; activate it after the whole dialog finishes.
       for (const segment of segments.filter((segment) => segment.link)) {
         const anchor = document.createElement("a");
-        anchor.className = "dialogue-link";
+        anchor.className = segment.element.className;
         anchor.textContent = segment.text;
         anchor.href = segment.link.href;
         anchor.target = "_blank";
