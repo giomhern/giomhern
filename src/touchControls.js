@@ -27,6 +27,17 @@ export function setupTouchControls(element) {
       pointers.set(event.pointerId, button.dataset.direction);
       refresh();
     });
+    button.addEventListener("pointermove", (event) => {
+      if (!button.hasPointerCapture(event.pointerId)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const bounds = button.getBoundingClientRect();
+      const inside = event.clientX >= bounds.left && event.clientX < bounds.right &&
+        event.clientY >= bounds.top && event.clientY < bounds.bottom;
+      if (inside && !disabled) pointers.set(event.pointerId, button.dataset.direction);
+      else pointers.delete(event.pointerId);
+      refresh();
+    });
     for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
       button.addEventListener(type, release);
     }
@@ -38,6 +49,15 @@ export function setupTouchControls(element) {
   }
   window.addEventListener("blur", clear);
   document.addEventListener("visibilitychange", clear);
+  // Safari can expose pinch gestures separately from pointer/touch actions.
+  const preventMobileGesture = (event) => {
+    if (window.matchMedia("(any-pointer: coarse)").matches) event.preventDefault();
+  };
+  for (const type of ["gesturestart", "gesturechange", "gestureend"]) {
+    document.addEventListener(type, preventMobileGesture, { passive: false });
+  }
+  document.addEventListener("dragstart", preventMobileGesture);
+  document.addEventListener("selectstart", preventMobileGesture);
   return {
     directions: () => new Set(pointers.values()),
     setDisabled(value) {

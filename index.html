@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=character" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Giovanni Maya</title>
   </head>
   <body>
@@ -86,6 +86,20 @@
       #textbox-container { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
       #textbox { max-height: 65dvh; overflow-y: auto; pointer-events: auto; }
       @media (any-pointer: coarse) {
+        html, body {
+          overscroll-behavior: none;
+          touch-action: none;
+        }
+        body {
+          position: fixed;
+          inset: 0;
+          margin: 0;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-touch-callout: none;
+        }
+        #game { touch-action: none; }
+        #textbox { touch-action: pan-y; }
         #help-button, .esc-hint { display: none; }
         #touch-controls {
           position: fixed;
@@ -96,11 +110,13 @@
           grid-template-columns: repeat(3, 52px);
           grid-template-rows: repeat(3, 52px);
           gap: 6px;
+          pointer-events: none;
           touch-action: none;
           user-select: none;
           -webkit-user-select: none;
         }
         #touch-controls button {
+          pointer-events: auto;
           position: relative;
           display: grid;
           place-items: center;
@@ -115,6 +131,7 @@
           -webkit-touch-callout: none;
         }
         #touch-controls button::after {
+          pointer-events: none;
           content: "";
           position: absolute;
           left: 50%;
