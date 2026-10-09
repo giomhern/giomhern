@@ -13,6 +13,12 @@
         src: url(monogram.ttf);
       }
 
+      html, body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
       body{
         font-family: monogram, monospace;
         font-size: 2rem;
@@ -20,10 +26,13 @@
 
       }
       #app {
+        position: fixed;
+        inset: 0;
         width: 100%;
         height: 100%;
-        position: relative;
+        height: 100dvh;
       }
+      #game { display: block; }
 
       #textbox {
         position: absolute; 
@@ -91,9 +100,6 @@
           touch-action: none;
         }
         body {
-          position: fixed;
-          inset: 0;
-          margin: 0;
           user-select: none;
           -webkit-user-select: none;
           -webkit-touch-callout: none;

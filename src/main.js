@@ -5,7 +5,7 @@ import { setupTouchControls } from "./touchControls";
 
 const touchControls = setupTouchControls(document.getElementById("touch-controls"));
 
-k.loadSprite("adventure-sprites", "./adventure-sprites.png", {
+const characterSpriteAsset = k.loadSprite("adventure-sprites", "./adventure-sprites.png", {
   sliceX: 39,
   sliceY: 31,
   // hookup to specific animations
@@ -100,6 +100,8 @@ k.loadShader("map-background", undefined, `
 `);
 
 k.scene("main", async () => {
+  // Mobile connections can finish the map request before the character texture.
+  const characterSpriteData = await characterSpriteAsset;
   // async function to load the map
   const mapData = await (await fetch("./map.json")).json();
   const layers = mapData.layers;
@@ -409,7 +411,7 @@ k.scene("main", async () => {
       anim: "idle-down",
     }),
     k.shader("dark-brown-hair", () => {
-      const frame = k.getSprite("adventure-sprites").data.frames[0];
+      const frame = characterSpriteData.frames[0];
       return { u_texel: k.vec2(frame.w / 16, frame.h / 16) };
     }),
     k.area({
@@ -527,7 +529,8 @@ k.scene("main", async () => {
       player.play(`idle-${["left", "right"].includes(player.direction) ? "side" : player.direction}`);
     }
     touchWasMoving = directions.size > 0;
-    k.camPos(player.pos.x, player.pos.y + 100);
+    const cameraOffset = Math.max(0, Math.min(100, k.height() / (2 * k.camScale().y) - 64));
+    k.camPos(player.pos.x, player.pos.y + cameraOffset);
     const playerFeetY = player.pos.y + 5 * scaleFactor;
     const tvBaseY = livingRoomTv.pos.y + 28 * livingRoomTvScale * scaleFactor;
     livingRoomTv.z = playerFeetY >= tvBaseY ? 0.5 : 2;
