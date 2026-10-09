@@ -5,7 +5,7 @@
   </picture>
 </a>
 
-## Hi, I'm Giovanni 👋
+## Hiya, I'm Giovanni 👋
 
 I'm studying **Computer Science and Data Science at UChicago**. I like building useful things and making them cool.
 
