@@ -196,7 +196,7 @@ k.scene("main", async () => {
     k.pos(livingRoomCenter - 16 * sofaScale, livingRoomRugTop - 3),
     k.scale(sofaScale),
     k.z(2),
-    k.area({ shape: new k.Rect(k.vec2(1, 4), 30, 12) }),
+    k.area({ shape: new k.Rect(k.vec2(0), 32, 16) }),
     k.body({ isStatic: true }),
   ]);
   // The back-facing TV sits below the sofa, with its screen facing the seats.
